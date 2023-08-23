@@ -1,0 +1,93 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices.WindowsRuntime;
+using System.Xml.Linq;
+using Windows.ApplicationModel;
+using Windows.ApplicationModel.Activation;
+using Windows.Foundation;
+using Windows.Foundation.Collections;
+using Windows.UI.Xaml;
+using Windows.UI.Xaml.Controls;
+using Windows.UI.Xaml.Controls.Primitives;
+using Windows.UI.Xaml.Data;
+using Windows.UI.Xaml.Input;
+using Windows.UI.Xaml.Media;
+using Windows.UI.Xaml.Navigation;
+using Windows.Data.Json;
+
+// 빈 페이지 항목 템플릿에 대한 설명은 https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x412에 나와 있습니다.
+
+namespace MetaShopClient
+{
+    /// <summary>
+    /// 자체적으로 사용하거나 프레임 내에서 탐색할 수 있는 빈 페이지입니다.
+    /// </summary>
+    public sealed partial class MainPage : Page
+    {
+        public MainPage()
+        {
+            this.InitializeComponent();
+
+        }
+
+        private async void Button_Click(object sender, RoutedEventArgs e)
+        {
+            if(displayTextBlock.Text == "로그인 성공")
+            {
+                await FullTrustProcessLauncher.LaunchFullTrustProcessForCurrentAppAsync();
+            }
+            
+        }
+        public void ErrorText(string errorText, string uriText)
+        {
+            accountTextBlock.Text = "error : " + errorText;
+            displayTextBlock.Text = " uriText : " + uriText;
+        }
+        public void DataUIVisible(string jsonData)
+        {
+            string userDataJson = "";
+            try
+            {
+                int startIndex = jsonData.IndexOf("{");//indexOf -> 문자열에서 특정 문자 또는 문자열을 찾는 메서드. 문자열 내에서 지정된 문자 또는 문자열의 첫 번째 등장하는 위치의 인덱스를 반환
+                int endIndex = jsonData.LastIndexOf("}");//문자열 내에서 특정 문자 또는 문자열을 뒤에서부터 찾고, 찾은 문자 또는 문자열의 첫번째 문자의 인덱스를 리턴.
+                if (startIndex >= 0 && endIndex > startIndex)
+                {
+                    userDataJson = jsonData.Substring(startIndex, endIndex - startIndex + 1);
+                    string uid = ExtractFieldValue(userDataJson, "uid");
+                    string displayName = ExtractFieldValue(userDataJson, "displayName");
+                    string email = ExtractFieldValue(userDataJson, "email");
+
+                    accountTextBlock.Text = $"uid: {uid}\ndisplayName: {displayName}\nemail: {email}";
+                    displayTextBlock.Text = "로그인 성공";
+                }
+                // 디코드된 JSON 데이터를 파싱하여 사용
+                
+            }
+            catch(Exception ex)
+            {
+                displayTextBlock.Text = "로그인 실패 : " + ex;
+            }
+            
+        }
+        private string ExtractFieldValue(string jsonContent, string fieldName)
+        {
+            int fieldStartIndex = jsonContent.IndexOf(fieldName);
+
+            if (fieldStartIndex >= 0)
+            {
+                int valueStartIndex = jsonContent.IndexOf(':', fieldStartIndex) + 1;
+                int valueEndIndex = jsonContent.IndexOfAny(new[] {',', '}'}, valueStartIndex);
+
+                if (valueEndIndex > valueStartIndex)
+                {
+                    string fieldValue = jsonContent.Substring(valueStartIndex, valueEndIndex - valueStartIndex).Trim();//공백제거
+                    fieldValue = fieldValue.Trim('\"', ' ', '\t', '\n', '\r');//큰따옴표 잘라냄.
+                    return fieldValue;
+                }
+            }
+            return null;
+        }
+    }
+}
